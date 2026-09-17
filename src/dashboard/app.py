@@ -1,5 +1,6 @@
 """Streamlit dashboard. Run with:  python run.py dashboard"""
 import json
+import sqlite3
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -14,7 +15,20 @@ from src.database import db
 from src.scoring.scorer import tier_for
 
 st.set_page_config(page_title="Recruiting Copilot", layout="wide")
-HOSTED = not config.DB_PATH.exists() and config.SLIM_DB_PATH.exists()
+def _scored_jobs(path) -> int:
+    if not path.exists():
+        return 0
+    try:
+        conn = sqlite3.connect(path)
+        n = conn.execute("SELECT COUNT(*) FROM jobs WHERE fit_score IS NOT NULL").fetchone()[0]
+        conn.close()
+        return n
+    except sqlite3.Error:
+        return 0
+
+
+# Hosted (Streamlit Cloud): no local database with data, so use the slim copy committed to git.
+HOSTED = _scored_jobs(config.DB_PATH) == 0 and config.SLIM_DB_PATH.exists()
 if HOSTED:
     config.DB_PATH = config.SLIM_DB_PATH
 db.init_db()
