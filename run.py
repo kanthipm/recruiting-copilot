@@ -78,13 +78,14 @@ def cmd_score(args):
 def cmd_shortlist(args):
     rows = [r for r in db.get_jobs() if r["fit_score"] is not None and r["status"] not in ("applied", "skipped")]
     buckets = {"HIGH": [], "REVIEW": [], "SKIP": []}
+    rows.sort(key=lambda r: (r["date_posted"] or "", r["fit_score"]), reverse=True)  # newest first
     for r in rows:
         buckets[tier_for(r["fit_score"])].append(r)
 
     def show(name, items, limit):
         print(f"\n{name} ({len(items)})")
         for r in items[:limit]:
-            print(f"  {r['fit_score']:.1f} | {r['title']} | {r['company']} | {r['location']}")
+            print(f"  {r['fit_score']:.1f} | {r['date_posted'] or '?':<10} | {r['title']} | {r['company']} | {r['location']}")
             if args.why:
                 print(f"        {r['fit_reason']}")
                 print(f"        {r['url']}")

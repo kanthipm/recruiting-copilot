@@ -15,6 +15,8 @@ from src.database import db
 from src.scoring.scorer import tier_for
 
 st.set_page_config(page_title="Recruiting Copilot", layout="wide")
+
+
 def _scored_jobs(path) -> int:
     if not path.exists():
         return 0
@@ -35,12 +37,12 @@ db.init_db()
 
 
 def load_jobs() -> pd.DataFrame:
-    rows = [dict(r) for r in db.get_jobs()]
-    df = pd.DataFrame(rows)
+    df = pd.DataFrame([dict(r) for r in db.get_jobs()])
     if df.empty:
         return df
     df = df[df["fit_score"].notna()].copy()
     df["tier"] = df["fit_score"].apply(tier_for)
+    df["date_posted"] = pd.to_datetime(df["date_posted"], errors="coerce")
     return df
 
 
@@ -52,12 +54,14 @@ if df.empty:
 
 # ---------------- sidebar filters ----------------
 st.sidebar.header("Filters")
+sort_by = st.sidebar.radio("Sort by", ["Newest posted", "Highest score"], horizontal=True)
 min_score = st.sidebar.slider("Minimum score", 0.0, 10.0, 0.0, 0.5)
 role_types = st.sidebar.multiselect("Role type", sorted(df["role_type"].dropna().unique()))
 companies = st.sidebar.multiselect("Company", sorted(df["company"].unique()))
 sources = st.sidebar.multiselect("Source", sorted(df["source"].unique()))
 location_q = st.sidebar.text_input("Location contains")
-days = st.sidebar.number_input("Found in the last N days (0 = all)", min_value=0, value=0)
+title_q = st.sidebar.text_input("Title contains")
+posted_days = st.sidebar.number_input("Posted in the last N days (0 = all)", min_value=0, value=0)
 show_done = st.sidebar.checkbox("Show applied / skipped", value=False)
 
 f = df[df["fit_score"] >= min_score]
@@ -69,11 +73,18 @@ if sources:
     f = f[f["source"].isin(sources)]
 if location_q:
     f = f[f["location"].str.contains(location_q, case=False, na=False)]
-if days:
-    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
-    f = f[f["date_found"] >= cutoff]
+if title_q:
+    f = f[f["title"].str.contains(title_q, case=False, na=False)]
+if posted_days:
+    cutoff = pd.Timestamp(datetime.now(timezone.utc) - timedelta(days=posted_days)).tz_localize(None)
+    f = f[f["date_posted"] >= cutoff]
 if not show_done:
     f = f[~f["status"].isin(["applied", "skipped"])]
+
+if sort_by == "Newest posted":
+    f = f.sort_values(["date_posted", "fit_score"], ascending=[False, False], na_position="last")
+else:
+    f = f.sort_values(["fit_score", "date_posted"], ascending=[False, False], na_position="last")
 
 st.title("Recruiting Copilot")
 s = db.stats()
@@ -83,32 +94,65 @@ if HOSTED:
     st.caption("Hosted copy: shows jobs above the REVIEW line, refreshed daily by GitHub Actions. "
                "Status changes here are not saved; use the local dashboard for that.")
 
+TABLE_COLS = ["fit_score", "title", "company", "location", "role_type", "date_posted", "status", "source", "url"]
+COLUMN_CONFIG = {
+    "fit_score": st.column_config.NumberColumn("Score", format="%.1f", width="small"),
+    "title": st.column_config.TextColumn("Title", width="large"),
+    "company": st.column_config.TextColumn("Company", width="medium"),
+    "location": st.column_config.TextColumn("Location", width="medium"),
+    "role_type": st.column_config.TextColumn("Role type", width="small"),
+    "date_posted": st.column_config.DateColumn("Posted", format="MMM D", width="small"),
+    "status": st.column_config.TextColumn("Status", width="small"),
+    "source": st.column_config.TextColumn("Source", width="small"),
+    "url": st.column_config.LinkColumn("Apply", display_text="open ↗", width="small"),
+}
 
-# ---------------- job card ----------------
-def render_job(row):
-    header = f"{row['fit_score']:.1f} | {row['title']} | {row['company']} | {row['location'] or 'n/a'}"
-    with st.expander(header):
-        left, right = st.columns([3, 1])
-        with left:
-            st.write(row["fit_reason"])
-            breakdown = json.loads(row["fit_breakdown"] or "{}")
-            table = pd.DataFrame(
-                [{"dimension": d, "score": v["score"], "weight": config.WEIGHTS.get(d, 0), "evidence": v["note"]}
-                 for d, v in breakdown.items()]
-            )
-            st.dataframe(table, hide_index=True, width="stretch")
-        with right:
-            st.link_button("Open application ↗", row["url"], width="stretch")
-            st.caption(f"Role type: {row['role_type']}")
-            st.caption(f"Source: {row['source']} · posted {row['date_posted'] or '?'} · found {row['date_found'][:10]}")
-            options = ["new", "saved", "applied", "skipped"]
-            current = row["status"] if row["status"] in options else "new"
-            new_status = st.selectbox("Status", options, index=options.index(current), key=f"status_{row['id']}")
-            if new_status != current:
-                db.set_status(int(row["id"]), new_status)
-                st.rerun()
-        with st.expander("Job description"):
-            st.text((row["description"] or "")[:6000])
+
+def render_detail(row):
+    st.subheader(f"{row['fit_score']:.1f} · {row['title']} · {row['company']}")
+    left, right = st.columns([3, 1])
+    with left:
+        st.write(row["fit_reason"])
+        breakdown = json.loads(row["fit_breakdown"] or "{}")
+        table = pd.DataFrame(
+            [{"dimension": d, "score": v["score"], "weight": config.WEIGHTS.get(d, 0), "evidence": v["note"]}
+             for d, v in breakdown.items()]
+        )
+        st.dataframe(table, hide_index=True, width="stretch")
+    with right:
+        st.link_button("Open application ↗", row["url"], width="stretch")
+        posted = row["date_posted"].date().isoformat() if pd.notna(row["date_posted"]) else "?"
+        st.caption(f"{row['location'] or 'n/a'} · {row['role_type']}")
+        st.caption(f"Source: {row['source']} · posted {posted} · found {row['date_found'][:10]}")
+        options = ["new", "saved", "applied", "skipped"]
+        current = row["status"] if row["status"] in options else "new"
+        new_status = st.selectbox("Status", options, index=options.index(current), key=f"status_{row['id']}")
+        if new_status != current:
+            db.set_status(int(row["id"]), new_status)
+            st.rerun()
+    with st.expander("Job description"):
+        st.text((row["description"] or "")[:6000])
+
+
+def render_tab(tier: str, subset: pd.DataFrame):
+    if subset.empty:
+        st.write("Nothing here.")
+        return
+    st.caption("Click a row to see why it fits and update its status.")
+    event = st.dataframe(
+        subset[TABLE_COLS],
+        column_config=COLUMN_CONFIG,
+        hide_index=True,
+        width="stretch",
+        height=min(600, 38 * (len(subset) + 1)),
+        on_select="rerun",
+        selection_mode="single-row",
+        key=f"table_{tier}",
+    )
+    selected = event.selection.rows if event and event.selection else []
+    if selected:
+        st.divider()
+        render_detail(subset.iloc[selected[0]])
 
 
 tabs = st.tabs([f"HIGH PRIORITY ({(f['tier'] == 'HIGH').sum()})",
@@ -116,10 +160,4 @@ tabs = st.tabs([f"HIGH PRIORITY ({(f['tier'] == 'HIGH').sum()})",
                 f"SKIP ({(f['tier'] == 'SKIP').sum()})"])
 for tab, tier in zip(tabs, ["HIGH", "REVIEW", "SKIP"]):
     with tab:
-        subset = f[f["tier"] == tier].sort_values("fit_score", ascending=False)
-        if subset.empty:
-            st.write("Nothing here.")
-        for _, row in subset.head(100).iterrows():
-            if len(subset) > 100 and _ == subset.index[0]:
-                st.caption(f"Showing top 100 of {len(subset)}; tighten filters to see more.")
-            render_job(row)
+        render_tab(tier, f[f["tier"] == tier].reset_index(drop=True))
