@@ -24,7 +24,6 @@
 
     {"collector": "lever", "board": "palantir", "company": "Palantir", "company_type": "public", "stage": "public", "industry": "data/AI", "quality": 4, "website": "https://palantir.com"},
     {"collector": "ashby", "board": "plaid", "company": "Plaid", "company_type": "scaleup", "stage": "growth", "industry": "fintech", "quality": 4, "website": "https://plaid.com"},
-    {"collector": "lever", "board": "hopper", "company": "Hopper", "company_type": "scaleup", "stage": "growth", "industry": "travel", "quality": 3, "website": "https://hopper.com"},
     {"collector": "lever", "board": "zoox", "company": "Zoox", "company_type": "scaleup", "stage": "growth", "industry": "autonomy", "quality": 3, "website": "https://zoox.com"},
 
     {"collector": "ashby", "board": "openai", "company": "OpenAI", "company_type": "ai lab", "stage": "growth", "industry": "AI", "quality": 5, "website": "https://openai.com"},
