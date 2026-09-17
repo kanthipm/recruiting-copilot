@@ -1,8 +1,12 @@
 """Central knobs. Edit these to tune scoring without touching the engine."""
+import os
 from pathlib import Path
 
 ROOT = Path(__file__).parent
-DB_PATH = ROOT / "data" / "recruiting.db"
+DB_PATH = Path(os.environ.get("RECRUITING_DB", ROOT / "data" / "recruiting.db"))
+# Slim copy (jobs above REVIEW_MIN, trimmed descriptions) that is committed to git for the hosted dashboard.
+SLIM_DB_PATH = ROOT / "data" / "dashboard.db"
+SLIM_MAX_DESCRIPTION = 4000
 PROFILE_PATH = ROOT / "profile.json"
 SOURCES_PATH = ROOT / "sources.json"
 

@@ -1,6 +1,6 @@
 .venv/
 __pycache__/
 *.pyc
-data/
-*.db
 .streamlit/
+data/*
+!data/dashboard.db

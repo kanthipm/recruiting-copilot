@@ -7,6 +7,7 @@
   python run.py dashboard        open the Streamlit dashboard
   python run.py check-sources    verify every source in sources.json responds
   python run.py explain <job_id> print the full score breakdown for one job
+  python run.py export           write data/dashboard.db (slim copy for the hosted dashboard)
 """
 import argparse
 import json
@@ -102,6 +103,12 @@ def cmd_daily(args):
     cmd_shortlist(args)
 
 
+def cmd_export(args):
+    n = db.export_slim(config.SLIM_DB_PATH, config.REVIEW_MIN, config.SLIM_MAX_DESCRIPTION)
+    size = config.SLIM_DB_PATH.stat().st_size / 1e6
+    print(f"Exported {n} jobs to {config.SLIM_DB_PATH} ({size:.1f} MB)")
+
+
 def cmd_dashboard(args):
     app = Path(__file__).parent / "src" / "dashboard" / "app.py"
     subprocess.run([sys.executable, "-m", "streamlit", "run", str(app)])
@@ -141,6 +148,7 @@ def main():
     p = sub.add_parser("shortlist"); p.add_argument("--limit", type=int, default=25); p.add_argument("--why", action="store_true"); p.set_defaults(fn=cmd_shortlist)
     p = sub.add_parser("daily"); p.add_argument("--rescore", action="store_true"); p.add_argument("--limit", type=int, default=25); p.add_argument("--why", action="store_true"); p.set_defaults(fn=cmd_daily)
     sub.add_parser("dashboard").set_defaults(fn=cmd_dashboard)
+    sub.add_parser("export").set_defaults(fn=cmd_export)
     sub.add_parser("check-sources").set_defaults(fn=cmd_check_sources)
     p = sub.add_parser("explain"); p.add_argument("job_id", type=int); p.set_defaults(fn=cmd_explain)
 

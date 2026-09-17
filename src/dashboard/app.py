@@ -14,6 +14,9 @@ from src.database import db
 from src.scoring.scorer import tier_for
 
 st.set_page_config(page_title="Recruiting Copilot", layout="wide")
+HOSTED = not config.DB_PATH.exists() and config.SLIM_DB_PATH.exists()
+if HOSTED:
+    config.DB_PATH = config.SLIM_DB_PATH
 db.init_db()
 
 
@@ -62,6 +65,9 @@ st.title("Recruiting Copilot")
 s = db.stats()
 st.caption(f"{s['jobs']} jobs from {s['companies']} companies · {len(f)} match filters · "
            f"HIGH ≥ {config.HIGH_PRIORITY_MIN}, REVIEW ≥ {config.REVIEW_MIN}")
+if HOSTED:
+    st.caption("Hosted copy: shows jobs above the REVIEW line, refreshed daily by GitHub Actions. "
+               "Status changes here are not saved; use the local dashboard for that.")
 
 
 # ---------------- job card ----------------

@@ -144,3 +144,30 @@ def stats() -> dict:
         scored = conn.execute("SELECT COUNT(*) FROM jobs WHERE fit_score IS NOT NULL").fetchone()[0]
         companies = conn.execute("SELECT COUNT(*) FROM companies").fetchone()[0]
     return {"jobs": total, "scored": scored, "companies": companies}
+
+
+def export_slim(dest, min_score: float, max_desc: int) -> int:
+    """Write a small copy of the DB (jobs >= min_score, trimmed descriptions) for hosting. Returns job count."""
+    dest = str(dest)
+    with connect() as conn:
+        conn.execute("ATTACH DATABASE ? AS slim", (dest,))
+        for stmt in SCHEMA.split(";"):
+            stmt = stmt.strip()
+            if stmt.startswith("CREATE TABLE"):
+                conn.execute(stmt.replace("CREATE TABLE IF NOT EXISTS ", "CREATE TABLE IF NOT EXISTS slim."))
+        conn.execute("DELETE FROM slim.jobs")
+        conn.execute("DELETE FROM slim.companies")
+        conn.execute("DELETE FROM slim.applications")
+        conn.execute("INSERT INTO slim.companies SELECT * FROM companies")
+        conn.execute(
+            """INSERT INTO slim.jobs
+               SELECT id, title, company, location, url, substr(description, 1, ?), source, date_posted,
+                      date_found, role_type, fit_score, fit_reason, fit_breakdown, status
+               FROM jobs WHERE fit_score >= ?""",
+            (max_desc, min_score),
+        )
+        conn.execute("INSERT INTO slim.applications SELECT * FROM applications")
+        n = conn.execute("SELECT COUNT(*) FROM slim.jobs").fetchone()[0]
+        conn.commit()
+        conn.execute("DETACH DATABASE slim")
+    return n
