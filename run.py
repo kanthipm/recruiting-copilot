@@ -101,6 +101,8 @@ def cmd_daily(args):
     cmd_score(args)
     print("\n== Shortlist ==")
     cmd_shortlist(args)
+    print()
+    cmd_export(args)
 
 
 def cmd_export(args):
