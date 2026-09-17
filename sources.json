@@ -1,0 +1,52 @@
+{
+  "_help": {
+    "collector": "one of: greenhouse, lever, ashby",
+    "board": "the board token from the company's job URL, e.g. boards.greenhouse.io/<board>, jobs.lever.co/<board>, jobs.ashbyhq.com/<board>",
+    "company_type": "startup | scaleup | ai lab | big tech | public | unknown  (feeds the startup-fit score)",
+    "stage": "optional: seed | series a | series b | series c | growth | public",
+    "quality": "your own 1-5 opinion of the company. This is the only 'company quality' signal; it is manual on purpose.",
+    "industry": "free text, e.g. AI, healthcare, fintech, devtools"
+  },
+  "sources": [
+    {"collector": "greenhouse", "board": "anthropic", "company": "Anthropic", "company_type": "ai lab", "stage": "growth", "industry": "AI", "quality": 5, "website": "https://anthropic.com"},
+    {"collector": "greenhouse", "board": "stripe", "company": "Stripe", "company_type": "scaleup", "stage": "growth", "industry": "fintech", "quality": 5, "website": "https://stripe.com"},
+    {"collector": "greenhouse", "board": "figma", "company": "Figma", "company_type": "public", "stage": "public", "industry": "design tools", "quality": 5, "website": "https://figma.com"},
+    {"collector": "greenhouse", "board": "databricks", "company": "Databricks", "company_type": "scaleup", "stage": "growth", "industry": "data/AI", "quality": 5, "website": "https://databricks.com"},
+    {"collector": "greenhouse", "board": "scaleai", "company": "Scale AI", "company_type": "scaleup", "stage": "growth", "industry": "AI", "quality": 4, "website": "https://scale.com"},
+    {"collector": "greenhouse", "board": "duolingo", "company": "Duolingo", "company_type": "public", "stage": "public", "industry": "consumer edtech", "quality": 4, "website": "https://duolingo.com"},
+    {"collector": "greenhouse", "board": "brex", "company": "Brex", "company_type": "scaleup", "stage": "growth", "industry": "fintech", "quality": 4, "website": "https://brex.com"},
+    {"collector": "greenhouse", "board": "cloudflare", "company": "Cloudflare", "company_type": "public", "stage": "public", "industry": "infrastructure", "quality": 4, "website": "https://cloudflare.com"},
+    {"collector": "greenhouse", "board": "oscar", "company": "Oscar Health", "company_type": "public", "stage": "public", "industry": "healthcare", "quality": 3, "website": "https://hioscar.com"},
+    {"collector": "greenhouse", "board": "zocdoc", "company": "Zocdoc", "company_type": "scaleup", "stage": "growth", "industry": "healthcare", "quality": 3, "website": "https://zocdoc.com"},
+    {"collector": "greenhouse", "board": "flatironhealth", "company": "Flatiron Health", "company_type": "scaleup", "stage": "growth", "industry": "healthcare", "quality": 4, "website": "https://flatiron.com"},
+    {"collector": "greenhouse", "board": "vercel", "company": "Vercel", "company_type": "scaleup", "stage": "series c", "industry": "devtools", "quality": 4, "website": "https://vercel.com"},
+    {"collector": "greenhouse", "board": "samsara", "company": "Samsara", "company_type": "public", "stage": "public", "industry": "IoT", "quality": 3, "website": "https://samsara.com"},
+
+    {"collector": "lever", "board": "palantir", "company": "Palantir", "company_type": "public", "stage": "public", "industry": "data/AI", "quality": 4, "website": "https://palantir.com"},
+    {"collector": "ashby", "board": "plaid", "company": "Plaid", "company_type": "scaleup", "stage": "growth", "industry": "fintech", "quality": 4, "website": "https://plaid.com"},
+    {"collector": "lever", "board": "hopper", "company": "Hopper", "company_type": "scaleup", "stage": "growth", "industry": "travel", "quality": 3, "website": "https://hopper.com"},
+    {"collector": "lever", "board": "zoox", "company": "Zoox", "company_type": "scaleup", "stage": "growth", "industry": "autonomy", "quality": 3, "website": "https://zoox.com"},
+
+    {"collector": "ashby", "board": "openai", "company": "OpenAI", "company_type": "ai lab", "stage": "growth", "industry": "AI", "quality": 5, "website": "https://openai.com"},
+    {"collector": "ashby", "board": "ramp", "company": "Ramp", "company_type": "scaleup", "stage": "growth", "industry": "fintech", "quality": 5, "website": "https://ramp.com"},
+    {"collector": "ashby", "board": "linear", "company": "Linear", "company_type": "startup", "stage": "series b", "industry": "devtools", "quality": 5, "website": "https://linear.app"},
+    {"collector": "ashby", "board": "replit", "company": "Replit", "company_type": "startup", "stage": "series b", "industry": "AI devtools", "quality": 4, "website": "https://replit.com"},
+    {"collector": "ashby", "board": "perplexity", "company": "Perplexity", "company_type": "startup", "stage": "series b", "industry": "AI", "quality": 5, "website": "https://perplexity.ai"},
+    {"collector": "ashby", "board": "cursor", "company": "Cursor (Anysphere)", "company_type": "startup", "stage": "series b", "industry": "AI devtools", "quality": 5, "website": "https://cursor.com"},
+    {"collector": "ashby", "board": "harvey", "company": "Harvey", "company_type": "startup", "stage": "series c", "industry": "legal AI", "quality": 4, "website": "https://harvey.ai"},
+    {"collector": "ashby", "board": "sierra", "company": "Sierra", "company_type": "startup", "stage": "series b", "industry": "AI", "quality": 5, "website": "https://sierra.ai"},
+    {"collector": "ashby", "board": "cohere", "company": "Cohere", "company_type": "ai lab", "stage": "series c", "industry": "AI", "quality": 4, "website": "https://cohere.com"},
+    {"collector": "ashby", "board": "elevenlabs", "company": "ElevenLabs", "company_type": "startup", "stage": "series b", "industry": "AI", "quality": 4, "website": "https://elevenlabs.io"},
+    {"collector": "ashby", "board": "abridge", "company": "Abridge", "company_type": "startup", "stage": "series c", "industry": "healthcare AI", "quality": 5, "website": "https://abridge.com"},
+    {"collector": "ashby", "board": "notion", "company": "Notion", "company_type": "scaleup", "stage": "growth", "industry": "productivity", "quality": 5, "website": "https://notion.so"},
+    {"collector": "ashby", "board": "supabase", "company": "Supabase", "company_type": "startup", "stage": "series b", "industry": "devtools", "quality": 4, "website": "https://supabase.com"},
+    {"collector": "ashby", "board": "commure", "company": "Commure", "company_type": "startup", "stage": "growth", "industry": "healthcare AI", "quality": 3, "website": "https://commure.com"},
+    {"collector": "ashby", "board": "tennr", "company": "Tennr", "company_type": "startup", "stage": "series c", "industry": "healthcare AI", "quality": 4, "website": "https://tennr.com"},
+    {"collector": "ashby", "board": "writer", "company": "Writer", "company_type": "startup", "stage": "series c", "industry": "AI", "quality": 4, "website": "https://writer.com"},
+    {"collector": "ashby", "board": "vanta", "company": "Vanta", "company_type": "scaleup", "stage": "growth", "industry": "security SaaS", "quality": 4, "website": "https://vanta.com"},
+    {"collector": "ashby", "board": "mercor", "company": "Mercor", "company_type": "startup", "stage": "series b", "industry": "AI", "quality": 4, "website": "https://mercor.com"},
+    {"collector": "ashby", "board": "lovable", "company": "Lovable", "company_type": "startup", "stage": "series a", "industry": "AI devtools", "quality": 4, "website": "https://lovable.dev"},
+    {"collector": "ashby", "board": "browserbase", "company": "Browserbase", "company_type": "startup", "stage": "series b", "industry": "AI devtools", "quality": 4, "website": "https://browserbase.com"},
+    {"collector": "greenhouse", "board": "togetherai", "company": "Together AI", "company_type": "startup", "stage": "series b", "industry": "AI infrastructure", "quality": 4, "website": "https://together.ai"}
+  ]
+}
