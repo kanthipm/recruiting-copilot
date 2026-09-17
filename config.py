@@ -26,11 +26,20 @@ WEIGHTS = {
 
 # Jobs that fail eligibility (senior titles, 5+ years required) are capped here.
 INELIGIBLE_CAP = 3.5
-# Jobs located outside the US are capped here (lands them in REVIEW at best).
+# US only: jobs located outside the US are capped at INELIGIBLE_CAP (SKIP).
+# Set to False to merely cap them at NON_US_CAP instead.
+US_ONLY = True
 NON_US_CAP = 6.0
 
+# Only jobs with an explicit early-career signal (new grad wording, or <= max_years_experience
+# stated) are eligible. Everything else is capped at INELIGIBLE_CAP.
+REQUIRE_EARLY_CAREER = True
+
+# Default window for the shortlist and dashboard: jobs posted in the last N days.
+RECENT_DAYS = 2
+
 # Overall score thresholds for the dashboard buckets.
-HIGH_PRIORITY_MIN = 8.0
+HIGH_PRIORITY_MIN = 7.5
 REVIEW_MIN = 5.5
 
 # Polite fetching.

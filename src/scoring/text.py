@@ -1,5 +1,6 @@
 """Small text helpers: keyword matching and title -> role type classification."""
 import re
+from functools import lru_cache
 
 # Ordered: first match wins. Patterns are matched against the lowercased title.
 ROLE_PATTERNS = [
@@ -10,7 +11,7 @@ ROLE_PATTERNS = [
     ("AI Product Engineer", r"ai product engineer|ai engineer, product|product engineer, ai|forward.?deployed|applied ai engineer|ai solutions engineer"),
     ("Product Engineer", r"product engineer|full.?stack product|founding engineer|solutions engineer|solutions architect|deployment strategist|implementation engineer"),
     ("ML/AI Engineer", r"machine learning|\bml\b|\bai\b|applied scientist|research engineer|research scientist|data scientist|deep learning|nlp|computer vision|member of technical staff|\bmts\b"),
-    ("Software Engineer", r"software engineer|software developer|\bswe\b|\bsde\b|full.?stack|back.?end|front.?end|platform engineer|infrastructure engineer|systems engineer|developer\b|\bengineer\b|engineering"),
+    ("Software Engineer", r"software engineer|software developer|software development|\bswe\b|\bsde\b|full.?stack|back.?end|front.?end|platform engineer|infrastructure engineer|web developer|mobile engineer|ios engineer|android engineer|data engineer|security engineer|site reliability|devops|cloud engineer|systems software"),
 ]
 
 
@@ -22,21 +23,20 @@ def classify_role(title: str) -> str:
     return "Other"
 
 
+@lru_cache(maxsize=4096)
+def _pattern(kw: str):
+    k = kw.lower()
+    if len(k) <= 3 or k.isalnum():
+        return re.compile(r"(?<![a-z0-9])" + re.escape(k) + r"(?![a-z0-9])")
+    return re.compile(re.escape(k))
+
+
 def find_keywords(text: str, keywords: list[str]) -> list[str]:
     """Return the keywords that appear in text (case-insensitive, word-boundary aware).
     Short tokens like 'ai' or 'ml' use strict word boundaries so 'email' doesn't match 'ai'.
     """
     low = text.lower()
-    hits = []
-    for kw in keywords:
-        k = kw.lower()
-        if len(k) <= 3 or k.isalnum():
-            pattern = r"(?<![a-z0-9])" + re.escape(k) + r"(?![a-z0-9])"
-        else:
-            pattern = re.escape(k)
-        if re.search(pattern, low):
-            hits.append(kw)
-    return hits
+    return [kw for kw in keywords if _pattern(kw).search(low)]
 
 
 def has_any(text: str, keywords: list[str]) -> bool:

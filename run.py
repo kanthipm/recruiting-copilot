@@ -69,16 +69,23 @@ def cmd_score(args):
     db.init_db()
     scorer = Scorer(load_profile(), db.get_companies_by_name())
     rows = db.get_jobs(unscored_only=not args.rescore)
+    results = []
     for r in rows:
         res = scorer.score(r["title"], r["description"], r["location"], r["company"])
-        db.save_score(r["id"], res.overall, res.reason, res.breakdown, res.role_type)
+        results.append((r["id"], res.overall, res.reason, res.breakdown, res.role_type))
+    db.save_scores(results)
     print(f"Scored {len(rows)} jobs.")
 
 
 def cmd_shortlist(args):
+    from datetime import date, timedelta
     rows = [r for r in db.get_jobs() if r["fit_score"] is not None and r["status"] not in ("applied", "skipped")]
+    if args.days:
+        cutoff = (date.today() - timedelta(days=args.days)).isoformat()
+        rows = [r for r in rows if (r["date_posted"] or "") >= cutoff]
+        print(f"Jobs posted since {cutoff} (use --days 0 for all)")
     buckets = {"HIGH": [], "REVIEW": [], "SKIP": []}
-    rows.sort(key=lambda r: (r["date_posted"] or "", r["fit_score"]), reverse=True)  # newest first
+    rows.sort(key=lambda r: (r["fit_score"], r["date_posted"] or ""), reverse=True)  # most relevant first
     for r in rows:
         buckets[tier_for(r["fit_score"])].append(r)
 
@@ -148,8 +155,8 @@ def main():
 
     sub.add_parser("fetch").set_defaults(fn=cmd_fetch)
     p = sub.add_parser("score"); p.add_argument("--rescore", action="store_true"); p.set_defaults(fn=cmd_score)
-    p = sub.add_parser("shortlist"); p.add_argument("--limit", type=int, default=25); p.add_argument("--why", action="store_true"); p.set_defaults(fn=cmd_shortlist)
-    p = sub.add_parser("daily"); p.add_argument("--rescore", action="store_true"); p.add_argument("--limit", type=int, default=25); p.add_argument("--why", action="store_true"); p.set_defaults(fn=cmd_daily)
+    p = sub.add_parser("shortlist"); p.add_argument("--limit", type=int, default=25); p.add_argument("--why", action="store_true"); p.add_argument("--days", type=int, default=config.RECENT_DAYS); p.set_defaults(fn=cmd_shortlist)
+    p = sub.add_parser("daily"); p.add_argument("--rescore", action="store_true"); p.add_argument("--limit", type=int, default=25); p.add_argument("--why", action="store_true"); p.add_argument("--days", type=int, default=config.RECENT_DAYS); p.set_defaults(fn=cmd_daily)
     sub.add_parser("dashboard").set_defaults(fn=cmd_dashboard)
     sub.add_parser("export").set_defaults(fn=cmd_export)
     sub.add_parser("check-sources").set_defaults(fn=cmd_check_sources)

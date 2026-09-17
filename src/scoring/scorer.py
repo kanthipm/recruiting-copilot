@@ -77,6 +77,8 @@ class Scorer:
         senior_hits = find_keywords(title, self.avoid["seniority_keywords"])
         if senior_hits:
             return 1, f"Senior-level title ('{senior_hits[0]}')"
+        if "manager" in t and "product manager" not in t:
+            return 1, "People-manager title (only product managers are targets)"
 
         for k in self.avoid.get("description_keywords", []):
             if k in desc.lower():
@@ -89,11 +91,13 @@ class Scorer:
             if years is not None and years > elig["max_years_experience"]:
                 return 6, note + f", but also mentions {years}+ years of experience"
             return 10, note
-        if years is None:
-            return 6, "No experience requirement stated; eligibility unclear"
-        if years <= elig["max_years_experience"]:
+        if years is not None and years <= elig["max_years_experience"]:
             return 9, f"Asks for {years}+ years of experience (internships count)"
-        if years <= 4:
+        if years is None:
+            if config.REQUIRE_EARLY_CAREER:
+                return 3, "No early-career signal: no new-grad wording and no years requirement stated"
+            return 6, "No experience requirement stated; eligibility unclear"
+        if years <= 4 and not config.REQUIRE_EARLY_CAREER:
             return 4, f"Asks for {years}+ years of experience; a stretch for a new grad"
         return 1, f"Requires {years}+ years of experience"
 
@@ -221,11 +225,13 @@ class Scorer:
 
         total_w = sum(config.WEIGHTS.values())
         overall = sum(b[d][0] * w for d, w in config.WEIGHTS.items()) / total_w
-        ineligible = b["eligibility"][0] <= 3
+        ineligible = b["eligibility"][0] <= 3 or role_type == "Other"
         if ineligible:
             overall = min(overall, config.INELIGIBLE_CAP)
         elif b["location"][0] <= 2:
-            overall = min(overall, config.NON_US_CAP)
+            overall = min(overall, config.INELIGIBLE_CAP if config.US_ONLY else config.NON_US_CAP)
+            if config.US_ONLY:
+                ineligible = True
         overall = round(overall, 1)
 
         breakdown = {d: {"score": s, "note": n} for d, (s, n) in b.items()}
@@ -234,7 +240,13 @@ class Scorer:
 
     def _reason(self, b: dict, ineligible: bool, role_type: str) -> str:
         if ineligible:
-            return f"Skip: {b['eligibility'][1]}. " + f"(Would otherwise be a {role_type} role: {b['career'][1].lower()}.)"
+            if b["eligibility"][0] <= 3:
+                why = b["eligibility"][1]
+            elif role_type == "Other":
+                why = b["career"][1]
+            else:
+                why = b["location"][1]
+            return f"Skip: {why}. " + f"(Would otherwise be a {role_type} role: {b['career'][1].lower()}.)"
         ranked = sorted(b.items(), key=lambda kv: -kv[1][0] * config.WEIGHTS[kv[0]])
         strengths = [n for d, (s, n) in ranked if s >= 8][:4]
         concerns = [n for d, (s, n) in b.items() if s <= 4 and d != "healthcare"][:2]

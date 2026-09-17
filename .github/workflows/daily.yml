@@ -28,7 +28,7 @@ jobs:
           key: recruiting-db-${{ github.run_id }}
           restore-keys: recruiting-db-
 
-      - run: python run.py daily
+      - run: python run.py daily --rescore
 
       - name: commit slim db
         run: |

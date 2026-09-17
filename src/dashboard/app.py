@@ -1,5 +1,6 @@
 """Streamlit dashboard. Run with:  python run.py dashboard"""
 import json
+import re
 import sqlite3
 import sys
 from datetime import datetime, timedelta, timezone
@@ -12,7 +13,35 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import config
 from src.database import db
-from src.scoring.scorer import tier_for
+from src.scoring.scorer import load_profile, tier_for
+
+PROFILE = load_profile()
+_LOC = PROFILE["location_preferences"]
+REGIONS = [
+    ("SF Bay Area", ["san francisco", "sf", "bay area", "palo alto", "mountain view", "menlo park", "sunnyvale",
+                     "san jose", "oakland", "redwood city", "san mateo", "berkeley"]),
+    ("New York", ["new york", "nyc", "brooklyn", "manhattan"]),
+    ("Seattle", ["seattle", "redmond", "bellevue", "kirkland"]),
+    ("Boston", ["boston", "cambridge, ma"]),
+    ("LA", ["los angeles", "santa monica", "irvine"]),
+    ("Austin", ["austin"]),
+    ("Chicago", ["chicago"]),
+    ("DC", ["washington, d", "washington dc", "arlington", "virginia", "maryland"]),
+    ("NC", ["durham", "raleigh", "chapel hill", "charlotte"]),
+]
+
+
+def region_of(location: str) -> str:
+    l = (location or "").lower()
+    if not l:
+        return "Unknown"
+    for s in _LOC["non_us_signals"]:
+        if re.search(r"(?<![a-z])" + re.escape(s.lower()) + r"(?![a-z])", l):
+            return "Non-US"
+    hits = [name for name, keys in REGIONS if any(k in l for k in keys)]
+    if hits:
+        return hits[0]
+    return "Remote (US)" if "remote" in l else "Other US"
 
 st.set_page_config(page_title="Recruiting Copilot", layout="wide")
 
@@ -43,6 +72,7 @@ def load_jobs() -> pd.DataFrame:
     df = df[df["fit_score"].notna()].copy()
     df["tier"] = df["fit_score"].apply(tier_for)
     df["date_posted"] = pd.to_datetime(df["date_posted"], errors="coerce")
+    df["region"] = df["location"].apply(region_of)
     return df
 
 
@@ -54,19 +84,22 @@ if df.empty:
 
 # ---------------- sidebar filters ----------------
 st.sidebar.header("Filters")
-sort_by = st.sidebar.radio("Sort by", ["Newest posted", "Highest score"], horizontal=True)
+sort_by = st.sidebar.radio("Sort by", ["Highest score", "Newest posted"], horizontal=True)
 min_score = st.sidebar.slider("Minimum score", 0.0, 10.0, 0.0, 0.5)
-role_types = st.sidebar.multiselect("Role type", sorted(df["role_type"].dropna().unique()))
+role_types = st.sidebar.multiselect("Role type (PM, SWE, ...)", sorted(df["role_type"].dropna().unique()))
+regions = st.sidebar.multiselect("Location", sorted(df["region"].unique()))
 companies = st.sidebar.multiselect("Company", sorted(df["company"].unique()))
 sources = st.sidebar.multiselect("Source", sorted(df["source"].unique()))
 location_q = st.sidebar.text_input("Location contains")
 title_q = st.sidebar.text_input("Title contains")
-posted_days = st.sidebar.number_input("Posted in the last N days (0 = all)", min_value=0, value=0)
+posted_days = st.sidebar.number_input("Posted in the last N days (0 = all)", min_value=0, value=config.RECENT_DAYS)
 show_done = st.sidebar.checkbox("Show applied / skipped", value=False)
 
 f = df[df["fit_score"] >= min_score]
 if role_types:
     f = f[f["role_type"].isin(role_types)]
+if regions:
+    f = f[f["region"].isin(regions)]
 if companies:
     f = f[f["company"].isin(companies)]
 if sources:
@@ -76,7 +109,7 @@ if location_q:
 if title_q:
     f = f[f["title"].str.contains(title_q, case=False, na=False)]
 if posted_days:
-    cutoff = pd.Timestamp(datetime.now(timezone.utc) - timedelta(days=posted_days)).tz_localize(None)
+    cutoff = pd.Timestamp(datetime.now(timezone.utc).date() - timedelta(days=posted_days))  # calendar days, like the CLI
     f = f[f["date_posted"] >= cutoff]
 if not show_done:
     f = f[~f["status"].isin(["applied", "skipped"])]
@@ -94,11 +127,12 @@ if HOSTED:
     st.caption("Hosted copy: shows jobs above the REVIEW line, refreshed daily by GitHub Actions. "
                "Status changes here are not saved; use the local dashboard for that.")
 
-TABLE_COLS = ["fit_score", "title", "company", "location", "role_type", "date_posted", "status", "source", "url"]
+TABLE_COLS = ["fit_score", "title", "company", "role_type", "region", "location", "date_posted", "status", "source", "url"]
 COLUMN_CONFIG = {
     "fit_score": st.column_config.NumberColumn("Score", format="%.1f", width="small"),
     "title": st.column_config.TextColumn("Title", width="large"),
     "company": st.column_config.TextColumn("Company", width="medium"),
+    "region": st.column_config.TextColumn("Region", width="small"),
     "location": st.column_config.TextColumn("Location", width="medium"),
     "role_type": st.column_config.TextColumn("Role type", width="small"),
     "date_posted": st.column_config.DateColumn("Posted", format="MMM D", width="small"),

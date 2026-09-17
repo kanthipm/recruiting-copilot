@@ -128,6 +128,15 @@ def save_score(job_id: int, score: float, reason: str, breakdown: dict, role_typ
         )
 
 
+def save_scores(results: list[tuple]):
+    """results: [(job_id, score, reason, breakdown_dict, role_type), ...] saved in one transaction."""
+    with connect() as conn:
+        conn.executemany(
+            "UPDATE jobs SET fit_score=?, fit_reason=?, fit_breakdown=?, role_type=? WHERE id=?",
+            [(s, r, json.dumps(b), rt, jid) for jid, s, r, b, rt in results],
+        )
+
+
 def set_status(job_id: int, status: str, notes: str = ""):
     with connect() as conn:
         conn.execute("UPDATE jobs SET status=? WHERE id=?", (status, job_id))

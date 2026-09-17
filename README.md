@@ -1,9 +1,9 @@
 # recruiting-copilot
 
-A free, local job opportunity engine. Every day it pulls new postings from public job-board
-APIs, scores each one against `profile.json` with a transparent rule-based scorer, and shows a
-ranked shortlist in a Streamlit dashboard. You decide what to apply to; Simplify handles the
-application itself.
+A free, local job opportunity engine. Every day it pulls new postings from 100+ public job
+boards, scores each one against `profile.json` with a transparent rule-based scorer, and shows
+a ranked shortlist of **new-grad / early-career roles in the US posted in the last 2 days** in a
+Streamlit dashboard. You decide what to apply to; Simplify handles the application itself.
 
 ```
 fetch (Greenhouse / Lever / Ashby)  ->  SQLite  ->  score against profile.json  ->  dashboard / CLI shortlist
@@ -26,7 +26,8 @@ python run.py daily               # fetch new jobs, score them, print the shortl
 python run.py dashboard           # open the Streamlit dashboard (http://localhost:8501)
 ```
 
-`daily` only scores jobs it hasn't scored yet, so it's fast after the first run.
+`daily` only scores jobs it hasn't scored yet, so it's fast after the first run. The shortlist
+shows jobs posted in the last 2 days (`--days 0` for everything), highest score first.
 
 ## Other commands
 
@@ -34,7 +35,7 @@ python run.py dashboard           # open the Streamlit dashboard (http://localho
 |---|---|
 | `python run.py fetch` | Pull jobs from every source in `sources.json` (dedupes by URL) |
 | `python run.py score` | Score unscored jobs. `--rescore` re-scores everything (run after editing `profile.json` or `config.py`) |
-| `python run.py shortlist --why` | Print HIGH / REVIEW lists with the reason and URL for each |
+| `python run.py shortlist --why` | Print HIGH / REVIEW lists with the reason and URL for each (`--days N` to widen the window) |
 | `python run.py explain <job_id>` | Full dimension-by-dimension breakdown for one job |
 | `python run.py check-sources` | Verify every board in `sources.json` responds |
 
@@ -46,7 +47,8 @@ python run.py dashboard           # open the Streamlit dashboard (http://localho
 - **`sources.json`**: one line per company board. `board` is the token from the company's job URL
   (`boards.greenhouse.io/<board>`, `jobs.lever.co/<board>`, `jobs.ashbyhq.com/<board>`).
   `quality` (1-5) is your own opinion of the company and is the only "company quality" signal.
-- **`config.py`**: dimension weights, HIGH/REVIEW thresholds, caps for ineligible and non-US jobs.
+- **`config.py`**: dimension weights, HIGH/REVIEW thresholds, the 2-day window (`RECENT_DAYS`),
+  and the two hard gates: `REQUIRE_EARLY_CAREER` and `US_ONLY`.
 
 After editing any of these: `python run.py score --rescore`.
 
@@ -67,8 +69,14 @@ Ten dimensions, each 0-10 with a note citing the evidence found in the posting:
 | location | Preferred / acceptable / remote / non-US (from `location_preferences`) |
 | healthcare | Healthcare company or clinical keywords (low weight; a bonus) |
 
-Overall = weighted mean (weights in `config.py`). Two hard caps keep the list honest:
-ineligible jobs (senior titles, 5+ years) are capped at 3.5, non-US jobs at 6.0.
+Overall = weighted mean (weights in `config.py`). Hard gates keep the list honest. A job is
+capped at 3.5 (SKIP) if any of these hold:
+
+- senior title, or requires more than 2 years of experience
+- no early-career signal at all (no new-grad wording and no years stated) when `REQUIRE_EARLY_CAREER` is on
+- located outside the US when `US_ONLY` is on
+- title doesn't map to any target role (sales, design, hardware, etc.)
+
 HIGH >= 8.0, REVIEW >= 5.5, otherwise SKIP.
 
 The score is rule-based and interpretable on purpose. It is good at ranking, not at
