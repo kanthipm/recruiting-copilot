@@ -2,7 +2,7 @@ name: daily
 
 on:
   schedule:
-    - cron: "0 12 * * *"   # 12:00 UTC = 8am ET
+    - cron: "0 11,23 * * *"   # 7am and 7pm ET (GitHub often fires an hour or more late)
   workflow_dispatch:
 
 permissions:

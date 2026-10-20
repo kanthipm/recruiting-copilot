@@ -189,6 +189,14 @@ def render_tab(tier: str, subset: pd.DataFrame):
         render_detail(subset.iloc[selected[0]])
 
 
+if posted_days and f.empty:
+    recent = df[~df["status"].isin(["applied", "skipped"])] if not show_done else df
+    recent = recent[recent["tier"] != "SKIP"]
+    last = recent["date_posted"].max()
+    last_txt = last.date().isoformat() if pd.notna(last) else "never"
+    st.info(f"No HIGH or REVIEW roles posted in the last {posted_days} days. "
+            f"Most recent match: {last_txt}. Set the window to 0 to browse everything.")
+
 tabs = st.tabs([f"HIGH PRIORITY ({(f['tier'] == 'HIGH').sum()})",
                 f"REVIEW ({(f['tier'] == 'REVIEW').sum()})",
                 f"SKIP ({(f['tier'] == 'SKIP').sum()})"])
